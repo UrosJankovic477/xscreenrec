@@ -1,4 +1,4 @@
-#include <xscreenrec.h>
+#include <xsr/xscreenrec.h>
 
 static const float coeffs[3][3] = 
 {
@@ -35,25 +35,6 @@ void XsrStartRecording(xsr_context *srctx, AVCodecContext *avctx, AVFrame *frame
 
     XsrEncode(avctx, NULL, packet, file);
     fwrite(endcode, 1, 4, file);
-}
-
-AVCodecContext *XsrCreateAVCodecContext(AVCodec *codec, xcb_screen_t *screen)
-{
-    AVCodecContext *avctx;
-    avctx = avcodec_alloc_context3(codec);
-    avctx->bit_rate = 1000000;
-    avctx->width = screen->width_in_pixels;
-    avctx->height = screen->height_in_pixels;
-    avctx->framerate = (AVRational){25, 1};
-    avctx->time_base = (AVRational){1, 25};
-
-    avctx->gop_size = 10;
-    avctx->max_b_frames = 1;
-    avctx->pix_fmt = AV_PIX_FMT_YUV420P;
-    if (codec->id == AV_CODEC_ID_H264)
-    {
-        av_opt_set(avctx->priv_data, "preset", "slow", 0);
-    }
 }
 
 void XsrEncode(AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file)
