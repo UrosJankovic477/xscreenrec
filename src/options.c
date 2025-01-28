@@ -19,6 +19,8 @@ xsr_optionid XsrFindOptionByName(const char *name)
 
 void XsrReadOptions(int argc, char const **argv)
 {
+    
+
     options[XSR_OPT_OUTPUTPATH].base = (xsr_option_base){XSR_OPT_OUTPUTPATH, "-o", "--output-path"};
     options[XSR_OPT_CODEC].base = (xsr_option_base){XSR_OPT_CODEC, "-c", "--codec"};
 
@@ -69,11 +71,6 @@ void XsrReadOptions(int argc, char const **argv)
                     int grouping = atoi(argv[i]);
                     switch (grouping)
                     {
-                        case 420:
-                        {
-                            options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV420P;
-                            break;
-                        }
                         case 444:
                         {
                             options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV444P;
@@ -84,9 +81,9 @@ void XsrReadOptions(int argc, char const **argv)
                             options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV422P;
                             break;
                         }
-                        case 410:
+                        case 420:
                         {
-                            options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV410P;
+                            options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV420P;
                             break;
                         }
                         case 411:
@@ -94,7 +91,12 @@ void XsrReadOptions(int argc, char const **argv)
                             options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV411P;
                             break;
                         }
-                        
+                        case 410:
+                        {
+                            options[optionid].pixfmt.pixfmt = AV_PIX_FMT_YUV410P;
+                            break;
+                        }
+
                         default:
                         {
                             fprintf(stderr, "Unrecognized pixel format. Recognized YUV formats: YUV444P, YUV422P, YUV420P, YUV411P, YUV410P\n");

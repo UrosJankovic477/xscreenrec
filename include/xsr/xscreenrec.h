@@ -10,6 +10,8 @@
 #include <time.h> 
 #include <pthread.h>
 #include <xsr/options.h>
+#include <xsr/format.h>
+#include <math.h>
 
 typedef struct struct_xsr_context
 {
@@ -17,6 +19,7 @@ typedef struct struct_xsr_context
     xcb_screen_t        *screen;
     int64_t             pts;
     double              elapsed_time;
+    uint32_t            frame_count;
 }
 xsr_context;
 

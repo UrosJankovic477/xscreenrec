@@ -89,7 +89,7 @@ int main(int argc, char const **argv)
     frame->format = avctx->pix_fmt;
     frame->width  = avctx->width;
     frame->height = avctx->height;
-    status = av_frame_get_buffer(frame, 32);
+    status = av_frame_get_buffer(frame, 0);
     if (status < 0) {
         fprintf(stderr, "Could not allocate the video frame data\n");
         exit(1);
