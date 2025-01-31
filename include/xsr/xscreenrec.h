@@ -17,14 +17,16 @@ typedef struct struct_xsr_context
 {
     xcb_connection_t    *connection;
     xcb_screen_t        *screen;
+    AVCodecContext      *avctx;
+    AVFrame             *frame;
+    AVPacket            *packet;
+    FILE                *file;
     int64_t             pts;
-    double              elapsed_time;
+    time_t              elapsed_time;
     uint32_t            frame_count;
 }
 xsr_context;
 
-void XsrEncodeFrames(xsr_context *srctx, AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file);
-void XsrEncode(AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file);
-void XsrStartRecording(xsr_context *srctx, AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file);
+void XsrStartRecording(xsr_context *srctx);
 
 #endif

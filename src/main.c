@@ -59,13 +59,13 @@ int main(int argc, char const **argv)
         const char *h = strtok(hms, ":");
         const char *m = strtok(NULL, ":");
         const char *s = strtok(NULL, ":");
-        const char *user = getlogin();
-        if (user == NULL)
-        {
-            fprintf(stderr, "Can't open file try running with \'sudo\'\n");
-        }
-        
-        sprintf(filename, "/home/%s/Videos/Screen recording %s %s-%s-%s.mp4", user, __DATE__, h, m, s);
+        //const char *user = getlogin();
+        //if (user == NULL)
+        //{
+        //    fprintf(stderr, "Can't open file try running with \'sudo\'\n");
+        //}
+        strcpy(filename, "../test.mp4");
+        //sprintf(filename, "/home/%s/Videos/Screen recording %s %s-%s-%s.mp4", user, __DATE__, h, m, s);
     }
     else
     {
@@ -101,11 +101,15 @@ int main(int argc, char const **argv)
     timespec_get(&end, TIME_UTC);
     xsr_context srctx;
     srctx.connection = connection;
-    srctx.elapsed_time = end.tv_sec - begin.tv_sec + ((double)(end.tv_nsec - begin.tv_nsec)) / 1000000000.0;
+    srctx.elapsed_time = end.tv_nsec - begin.tv_nsec;
     srctx.pts = 0;
     srctx.screen = screen;
+    srctx.avctx = avctx;
+    srctx.frame = frame;
+    srctx.packet = packet;
+    srctx.file = file;
 
-    XsrStartRecording(&srctx, avctx, frame, packet, file);
+    XsrStartRecording(&srctx);
 
     avcodec_free_context(&avctx);
     av_frame_free(&frame);
