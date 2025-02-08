@@ -38,7 +38,7 @@ int main(int argc, char const **argv)
     avctx->pix_fmt = XsrGetOption(XSR_OPT_PIXFMT).pixfmt.pixfmt;
     if (codec->id == AV_CODEC_ID_H264)
     {
-        av_opt_set(avctx->priv_data, "preset", "slow", 0);
+        av_opt_set(avctx->priv_data, "preset", "ultrafast", 0);
     }
     
     xcb_window_t window = screen->root;
@@ -50,7 +50,6 @@ int main(int argc, char const **argv)
     {
         exit(1);
     }
-     
     char filename[256];
     const char *outpath_opt = XsrGetOption(XSR_OPT_OUTPUTPATH).outputpath.path;
     if (outpath_opt == NULL)

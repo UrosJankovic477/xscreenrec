@@ -1,76 +1,121 @@
 #define _XOPEN_SOURCE 700
 #include <xsr/xscreenrec.h>
 #include <signal.h>
+#include <stdbool.h>
+#include <unistd.h>
 
+#define XSR_THREAD_MAXCOUNT 16
 
 static int recording = 1;
-static pthread_t listener;
 static const uint8_t endcode[] = { 0, 0, 1, 0xb7 };
 
-static timer_t timer;
 static pthread_mutex_t pts_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t image_mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_mutex_t active_thread_count_mutex = PTHREAD_MUTEX_INITIALIZER;
-static uint32_t active_thread_count = 0;
+static pthread_mutex_t recording_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t cond_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
+static int cond_val = 0;
+
+static pthread_t threads[XSR_THREAD_MAXCOUNT];
+static pthread_t clock_thread;
+
 
 static xcb_image_t *image = NULL;
 
-void *wait_end_of_recording(void *arg)
+void XsrEncodeFrames(xsr_context *srctx);
+void XsrEncode(AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file);
+void XsrFormatVideo(xsr_context *srctx);
+
+void *XsrClock(void *arg)
 {
-    getchar();
-
-    timer_delete(timer);
-
-    int loop = 1;
-    while (loop)
+    struct timespec ts, rem;
+    ts.tv_sec = 0;
+    xsr_option fps = XsrGetOption(XSR_OPT_FRAMERATE);
+    ts.tv_nsec = 1000000000l / (long)fps.framerate.framerate.num;
+    while (true)
     {
-        pthread_mutex_lock(&active_thread_count_mutex);
-        if (active_thread_count == 0)
+        int status = nanosleep(&ts, NULL);
+        pthread_mutex_lock(&recording_mutex);
+        if (!recording)
         {
-            loop = 0;
+            return NULL;
         }
-        pthread_mutex_unlock(&active_thread_count_mutex);
-    }
+        pthread_mutex_unlock(&recording_mutex);
 
-    return NULL;
+        pthread_cond_signal(&cond);
+    }
 }
 
-void XsrEncodeFrames(__sigval_t __srctx);
-void XsrEncode(AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *file);
+void *XsrThreadCallback(void *srctxvp)
+{   
+    while (true)
+    {
+        pthread_mutex_lock(&cond_mutex);
+        cond_val++;
+        pthread_cond_wait(&cond, &cond_mutex);
+        cond_val--;
+        pthread_mutex_unlock(&cond_mutex);
+
+        pthread_mutex_lock(&recording_mutex);
+        if (!recording)
+        {
+            return NULL;
+        }
+        pthread_mutex_unlock(&recording_mutex);
+
+        XsrEncodeFrames((xsr_context*)srctxvp);
+    }   
+}
 
 void XsrStartRecording(xsr_context *srctx)
 {
+    pthread_setcancelstate(PTHREAD_CANCEL_DEFERRED, NULL);
     xcb_connection_t *connection = srctx->connection;
     xcb_screen_t *screen = srctx->screen;
     xcb_window_t window = screen->root;
     image = xcb_image_get(connection, window, 0, 0, screen->width_in_pixels, screen->height_in_pixels, 0x00ffffff, XCB_IMAGE_FORMAT_Z_PIXMAP);
 
+    for (size_t i = 0; i < 2; i++)
+
+    {
+        pthread_create(&threads[i], NULL, XsrThreadCallback, srctx);
+    }
+
+    pthread_create(&clock_thread, NULL, XsrClock, NULL);
+
+    getchar();
+
+    pthread_mutex_lock(&recording_mutex);
+    recording = false;
+    pthread_mutex_unlock(&recording_mutex);
+
+    pthread_join(clock_thread, NULL);
+
+    while (true)
+    {
+        pthread_mutex_lock(&cond_mutex);
+        if (cond_val == 2)
+        {
+            pthread_mutex_unlock(&cond_mutex);
+            break;
+        }
+        pthread_mutex_unlock(&cond_mutex);
+    }
     
 
-    struct sigevent se;
-    se.sigev_signo = SIGUSR1;
-    se.sigev_notify = SIGEV_THREAD;
-    se._sigev_un._sigev_thread._attribute = NULL;
-    se._sigev_un._sigev_thread._function = XsrEncodeFrames;
-    se.sigev_value.sival_ptr = srctx;
-    
-    timer_create(CLOCK_REALTIME, &se, &timer);
+    for (size_t i = 0; i < 2; i++)
+    {
+        pthread_cancel(threads[i]);
+    }
 
-    pthread_create(&listener, NULL, wait_end_of_recording, NULL);
-
-    struct itimerspec its;
-    its.it_value.tv_sec = 0;
-    its.it_value.tv_nsec = 1000000000 / srctx->avctx->framerate.num;
-    its.it_interval.tv_sec = 0;
-    its.it_interval.tv_nsec = its.it_value.tv_nsec;
-    timer_settime(timer, 0, &its, NULL);
-
-    pthread_join(listener, NULL);
-    
     if (image != NULL)
     {
         xcb_image_destroy(image);
     }
+
+    pthread_mutex_destroy(&recording_mutex);
+    pthread_mutex_destroy(&cond_mutex);
+    pthread_cond_destroy(&cond);
     pthread_mutex_destroy(&pts_mutex);
     pthread_mutex_destroy(&image_mutex);
     XsrEncode(srctx->avctx, NULL, srctx->packet, srctx->file);
@@ -102,17 +147,12 @@ void XsrEncode(AVCodecContext *avctx, AVFrame *frame, AVPacket *packet, FILE *fi
     }
 }
 
-void XsrEncodeFrames(__sigval_t __srctx)
+void XsrEncodeFrames(xsr_context *srctx)
 {
-    pthread_mutex_lock(&active_thread_count_mutex);
-    active_thread_count++;
-    pthread_mutex_unlock(&active_thread_count_mutex);
-
-    xsr_context *srctx = (xsr_context*)__srctx.sival_ptr;
     xcb_connection_t *connection = srctx->connection;
     xcb_screen_t *screen = srctx->screen;
     xcb_window_t window = screen->root;
-    int status = 0;
+    volatile int status = 0;
     status = pthread_mutex_trylock(&image_mutex);
     if (status == 0)
     {
@@ -129,12 +169,9 @@ void XsrEncodeFrames(__sigval_t __srctx)
     
     XsrFromatFrame(image, srctx->frame);
     pthread_mutex_unlock(&image_mutex);
-    srctx->frame->pts = srctx->pts++;
+    srctx->frame_count = srctx->frame->pts = srctx->pts++;
+    
     XsrEncode(srctx->avctx, srctx->frame, srctx->packet, srctx->file);
     pthread_mutex_unlock(&pts_mutex);
-
-    pthread_mutex_lock(&active_thread_count_mutex);
-    active_thread_count--;
-    pthread_mutex_unlock(&active_thread_count_mutex);
 }
 

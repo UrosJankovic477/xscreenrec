@@ -13,7 +13,7 @@ file(GLOB_RECURSE HEADER_FILES
 ${CMAKE_SOURCE_DIR}/include/*.h
 ${CMAKE_SOURCE_DIR}/include/*.hpp)
 
-set(LIBS m rt xcb xcb-util xcb-image avcodec avutil)
+set(LIBS m rt xcb xcb-util xcb-image avcodec avutil pthread c)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/include)

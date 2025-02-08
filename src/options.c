@@ -6,7 +6,7 @@ static xsr_option options[XSR_OPT_COUNT] =
     {.outputpath = {(xsr_option_base){XSR_OPT_OUTPUTPATH, "-o", "--output-path"}, NULL}},
     {.codec = {(xsr_option_base){XSR_OPT_CODEC, "-c", "--codec"}, AV_CODEC_ID_H264}},
     {.framerate = {(xsr_option_base){XSR_OPT_FRAMERATE, "-f", "--framerate"}, (AVRational){25, 1}}},
-    {.bit_rate = {(xsr_option_base){XSR_OPT_BITRATE, "-b", "--bitrate"}, 1000000}},
+    {.bit_rate = {(xsr_option_base){XSR_OPT_BITRATE, "-b", "--bitrate"}, 2400000}},
     {.pixfmt = {(xsr_option_base){XSR_OPT_PIXFMT, "-p", "--pixel-fmt"}, AV_PIX_FMT_YUV420P}},
 };
 
