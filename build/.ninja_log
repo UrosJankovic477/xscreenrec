@@ -1,0 +1,7 @@
+# ninja log v5
+5	304	1739042484265504931	CMakeFiles/screenrec.dir/src/format.c.o	b702ae68a6fe8fac
+171	329	1739043095657581384	screenrec	d9109bf1c825bc99
+2	153	1738890537350111771	CMakeFiles/screenrec.dir/src/options.c.o	5e89a83bd5f59f11
+6	311	1739042484271505134	CMakeFiles/screenrec.dir/src/xscreenrec.c.o	540bc1003b00af3e
+4	171	1739043095502578087	CMakeFiles/screenrec.dir/src/main.c.o	67e846cab86077bb
+1	50	1751295880326140758	build.ninja	a75f6bfc32b3065d
